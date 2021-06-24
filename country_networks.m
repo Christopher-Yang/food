@@ -86,7 +86,7 @@ for k = 1:Ncuisines
         a = strrep(a, 'natural ','');
         a = strrep(a, 'no salt added ','');
         a = strrep(a, 'non fat ','');
-        a = strrep(a, 'nonfat','');
+        a = strrep(a, 'nonfat ','');
         a = strrep(a, 'Old El Paso ','');
         a = strrep(a, 'organic ','');
         a = strrep(a, 'part skim ','');
@@ -527,7 +527,7 @@ for k = 1:Ncuisines
         
         % some post hoc additions that should come at the end
         a = strrep(a, 'low fat ','');
-        a = strrep(a, 'low sodium','');
+        a = strrep(a, 'low sodium ','');
         a = strrep(a, 'beef bones','beef');
         a = strrep(a, 'beef brisket','beef');
         a = strrep(a, 'beef chuck','beef');
@@ -698,3 +698,32 @@ end
 figure(3); clf
 bar(categorical(uniqueProfiles),counts2)
 ylabel('counts')
+
+%%
+
+allNames = [];
+allRecipes = cell(Nrecipes*Ncuisines,1);
+for k = 1:Ncuisines
+    allNames = [allNames; string(names{k})'];
+    
+    for i = 1:Nrecipes
+        allRecipes{(k-1)*100+i} = afterList(i).(cuisineTypes{k});
+    end
+end
+
+allNames = unique(allNames);
+
+for k = 1:Ncuisines
+    for i = 1:Nrecipes
+        combos = nchoosek(subset_data(i).ingredients,2);
+        
+        for j = 1:size(combos,1)
+            a = combos(j,:);
+            rowIdx = strcmp(a(1),names{k});
+            columnIdx = strcmp(a(2),names{k});
+            
+            adjMatrix{k}(rowIdx,columnIdx) = adjMatrix{k}(rowIdx,columnIdx) + 1;
+            adjMatrix{k}(columnIdx,rowIdx) = adjMatrix{k}(columnIdx,rowIdx) + 1;
+        end
+    end
+end
