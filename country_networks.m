@@ -115,10 +115,11 @@ for k = 1:Ncuisines
         a = strrep(a, 'unsweetened ','');
         
         % edit capitalized entries first
+        a = strrep(a, '7 Up', 'Seven Up');
         a = strrep(a, 'and dried fish', 'fish');
         a = strrep(a, 'Baileys Irish Cream Liqueur','Irish cream liqueur');
         a = strrep(a, 'Best Foods® Real Mayonnaise','mayonnaise');
-        a = strrep(a, 'Boston_lettuce','lettuce');
+        a = strrep(a, 'Boston lettuce','lettuce');
         a = strrep(a, 'Challenge Butter','butter');
         a = strrep(a, 'Chinese egg noodles','egg noodles');
         a = strrep(a, "Colman's Mustard Powder",'mustard powder');
@@ -391,6 +392,7 @@ for k = 1:Ncuisines
         a = strrep(a, 'mint sprigs','mint');
         a = strrep(a, 'miso paste','miso');
         a = strrep(a, 'monterey jack','monterey jack cheese');
+        a = strrep(a, 'mrs. dash seasoning mix','mrs dash seasoning mix');
         a = strrep(a, 'mung bean sprouts','bean sprouts');
         a = strrep(a, 'mussels well scrubbed','mussels');
         a = strrep(a, 'napa cabbage leaves','napa cabbage');
@@ -656,19 +658,6 @@ for k = 1:Ncuisines
 %     writetable(T, '../../Gephi/test.csv')
 end
 
-% determine whether there are self-loops in the adjacency matrix; we want
-% to eliminate all self-loops because an ingredient should not be connected
-% to itself; self_loops{k} contains the self loops for the kth country in
-% cuisineTypes
-for k = 1:Ncuisines
-    idx = diag(adjMatrix{k}) > 0; % indices of self-loops
-    if sum(idx) > 0 % if there are self loops...
-        self_loops{k} = names{k}(idx); % store names of ingredients which have self loops
-    else % if there are no self loops...
-        self_loops{k} = ''; % store nothing in this index
-    end
-end
-
 %% find highest Nnodes centrality nodes
 
 Nnodes = 5; % number of nodes to extract
@@ -712,18 +701,37 @@ for k = 1:Ncuisines
 end
 
 allNames = unique(allNames);
+adjMatrix_all = zeros(length(allNames));
 
-for k = 1:Ncuisines
-    for i = 1:Nrecipes
-        combos = nchoosek(subset_data(i).ingredients,2);
+for i = 1:Ncuisines*Nrecipes
+    combos = nchoosek(allRecipes{i},2);
+    
+    for j = 1:size(combos,1)
+        a = combos(j,:);
+        rowIdx = strcmp(a(1),allNames);
+        columnIdx = strcmp(a(2),allNames);
         
-        for j = 1:size(combos,1)
-            a = combos(j,:);
-            rowIdx = strcmp(a(1),names{k});
-            columnIdx = strcmp(a(2),names{k});
-            
-            adjMatrix{k}(rowIdx,columnIdx) = adjMatrix{k}(rowIdx,columnIdx) + 1;
-            adjMatrix{k}(columnIdx,rowIdx) = adjMatrix{k}(columnIdx,rowIdx) + 1;
-        end
+        adjMatrix_all(rowIdx,columnIdx) = adjMatrix_all(rowIdx,columnIdx) + 1;
+        adjMatrix_all(columnIdx,rowIdx) = adjMatrix_all(columnIdx,rowIdx) + 1;
     end
 end
+
+idx = find(strcmp('grained',allNames));
+
+% take out the ingredient "grained" because it doesn't seem to be an
+% ingredient
+allNames = [allNames(1:idx-1); allNames(idx+1:end)];
+adjMatrix_all = [adjMatrix_all(1:idx-1, 1:idx-1) adjMatrix_all(1:idx-1, idx+1:end)
+    adjMatrix_all(idx+1:end, 1:idx-1) adjMatrix_all(idx+1:end, idx+1:end)];
+
+%% plot graph
+
+% G = graph(adjMatrix_all);
+% figure(3); clf
+% plot(G,'NodeLabel',allNames)
+
+T1 = array2table(adjMatrix_all);
+T1.Properties.VariableNames = allNames;
+T2 = table(allNames, 'VariableNames', {'header'});
+T = [T2 T1];
+writetable(T, '../../Gephi/ingredients.csv')
